@@ -37,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var windowsByName: [String: NSWindow] = [:]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        EditMenu.install(appName: "AikoFlow")
         settings = FlowSettings()
         manager = Manager(settings: settings)
         manager.onChange = { [weak self] in self?.updateStatus() }
