@@ -1,0 +1,31 @@
+Accessibilité accordée : oui
+2026-10-20 13:11:16.429 AikoFlow[1917:8446] WARNING: Secure coding is automatically enabled for restorable state! However, not on all supported macOS versions of this application. Opt-in to secure coding explicitly by implementing NSApplicationDelegate.applicationSupportsSecureRestorableState:.
+2026-10-20 13:11:17.561 AikoFlow[1941:8648] WARNING: Secure coding is automatically enabled for restorable state! However, not on all supported macOS versions of this application. Opt-in to secure coding explicitly by implementing NSApplicationDelegate.applicationSupportsSecureRestorableState:.
+2026-10-20 13:11:17.625 AikoFlow[1936:8610] WARNING: Secure coding is automatically enabled for restorable state! However, not on all supported macOS versions of this application. Opt-in to secure coding explicitly by implementing NSApplicationDelegate.applicationSupportsSecureRestorableState:.
+   fenêtres gérées : 3 (dont démos : 3)
+  ok   les 3 fenêtres de démo sont prises en charge
+  ok   aucune fenêtre ne se chevauche
+  ok   toutes dans la zone de l'écran
+   cadres : 964,35 946×471 | 10,35 946×950 | 964,514 946×471
+   capture 1-pavage.png
+  ok   fenêtre envoyée page 2 : rangée hors de l'écran
+  ok   les 2 autres se partagent la place
+   capture 2-page1-apres-envoi.png
+  ok   page 2 : la fenêtre seule prend toute la largeur (1900)
+  ok   page 2 : les fenêtres de la page 1 sont cachées
+   capture 3-page2.png
+  ok   agrandir au clavier déplace la séparation
+== Souris : ⌃⌥ + glisser
+  ok   écoute de la souris active
+   capture 4a-glisser.png
+  ok   la fenêtre suit la souris pendant le glissement
+  ok   lâchée sur l'autre fenêtre : elles échangent leur place
+== Vitesse
+  ok   avec animation, la fenêtre arrive à la bonne place
+   changement de page : 29 ms sans animation, 13 ms d'attente avec animation (puis 160 ms d'animation en arrière-plan)
+  ok   changer de page ne bloque pas (12 ms)
+   capture 4-vue-ensemble.png
+  ok   en coupant AikoFlow, toutes les fenêtres réapparaissent
+   capture 5-coupe.png
+
+Tout est OK

@@ -1,0 +1,32 @@
+== Ajout de fenêtres
+  ok   1 fenêtre : tout l'écran moins la marge → 1: 10,35 1420×855
+   1: 10,35 706×855 | 2: 724,35 706×855
+  ok   2 fenêtres côte à côte, même largeur, 8 px entre elles
+   1: 10,35 706×855 | 2: 724,35 706×424 | 3: 724,467 706×423
+  ok   3e fenêtre : la moitié droite se coupe en haut / bas (dwindle)
+   1: 10,35 706×855 | 2: 724,35 706×424 | 3: 724,467 349×423 | 4: 1081,467 349×423
+  ok   4e : le bas droit se coupe en gauche / droite
+  ok   aucun chevauchement, tout reste dans l'écran
+  ok   l'écran est bien rempli (98 %)
+== Voisins
+  ok   à droite de 1 → 2
+  ok   sous 2 → 3 ou 4
+  ok   à gauche de 4 → 3
+  ok   à gauche de 3 → 1
+  ok   rien à gauche de 1
+== Modifications
+  ok   échange 1 ↔ 4
+  ok   agrandir vers la droite (706 → 777)
+  ok   rééquilibrer
+  ok   changer le sens du partage
+  ok   redimensionnement à la souris adopté (706 → 805)
+  ok   toujours aucun chevauchement
+== Fermeture
+   1: 10,35 706×855 | 3: 724,35 349×855 | 4: 1081,35 349×855
+  ok   fermer 2 : 3 et 4 prennent sa place
+  ok   dernière fenêtre : plein écran
+  ok   page vide
+== Écran vertical
+  ok   écran vertical : l'une sur l'autre
+
+Tout est OK
