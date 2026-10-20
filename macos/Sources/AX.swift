@@ -122,3 +122,9 @@ enum ScreenGeometry {
         return CGPoint(x: all.maxX - 1, y: all.maxY - 1)
     }
 }
+
+extension NSScreen {
+    var displayID: CGDirectDisplayID {
+        (deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
+    }
+}
