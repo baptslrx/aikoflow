@@ -83,6 +83,8 @@ enum Keys {
         KeyHelp(keys: "← ↑ → ↓", extra: "", label: "Passer à la fenêtre voisine"),
         KeyHelp(keys: "← ↑ → ↓", extra: "⇧", label: "Déplacer la fenêtre"),
         KeyHelp(keys: "← ↑ → ↓", extra: "⌘", label: "Agrandir / réduire"),
+        KeyHelp(keys: "+ clic gauche glissé", extra: "", label: "Déplacer la fenêtre (attrapée n'importe où)"),
+        KeyHelp(keys: "+ clic droit glissé", extra: "", label: "Redimensionner à la souris"),
         KeyHelp(keys: "⇥", extra: "", label: "Vue d'ensemble des pages"),
         KeyHelp(keys: "F", extra: "", label: "Plein écran (dans AikoFlow)"),
         KeyHelp(keys: "T", extra: "", label: "Fenêtre flottante / rangée"),

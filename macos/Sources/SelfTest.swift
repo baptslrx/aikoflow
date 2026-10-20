@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 
 /// Petite fenêtre de démonstration (lancée dans un processus séparé par le test automatique).
 @MainActor
@@ -152,6 +153,63 @@ final class SelfTest {
             check(abs(after.width - before.width) > 20 || abs(after.minX - before.minX) > 20,
                   "agrandir au clavier déplace la séparation")
         }
+
+        log("== Souris : ⌃⌥ + glisser")
+        let drag = DragController(manager: m, settings: settings)
+        drag.start()
+        check(drag.isRunning, "écoute de la souris active")
+        let page1 = demoWindows.filter { $0.page == 1 }
+        if page1.count == 2, let fa = page1[0].placed, let fb = page1[1].placed {
+            let a = page1[0], b = page1[1]
+            func post(_ type: CGEventType, _ p: CGPoint) {
+                let e = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: p, mouseButton: .left)
+                e?.flags = [.maskControl, .maskAlternate]
+                e?.post(tap: .cghidEventTap)
+            }
+            let start = CGPoint(x: fa.midX, y: fa.midY), end = CGPoint(x: fb.midX, y: fb.midY)
+            post(.leftMouseDown, start)
+            await sleep(0.2)
+            var followed = false
+            for i in 1...12 {
+                let t = CGFloat(i) / 12
+                post(.leftMouseDragged, CGPoint(x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t))
+                await sleep(0.04)
+                if i == 6, let mid = AX.frame(a.element), abs(mid.minX - fa.minX) > 40 || abs(mid.minY - fa.minY) > 40 {
+                    followed = true
+                }
+            }
+            shot("4a-glisser.png")
+            post(.leftMouseUp, end)
+            await sleep(0.7)
+            check(followed, "la fenêtre suit la souris pendant le glissement")
+            let na = AX.frame(a.element) ?? .zero, nb = AX.frame(b.element) ?? .zero
+            check(abs(na.minX - fb.minX) < 4 && abs(na.minY - fb.minY) < 4 && abs(nb.minX - fa.minX) < 4,
+                  "lâchée sur l'autre fenêtre : elles échangent leur place")
+        } else {
+            check(false, "2 fenêtres attendues sur la page 1 pour le test de glisser (\(page1.count))")
+        }
+        drag.stop()
+
+        log("== Vitesse")
+        settings.animations = false
+        var t0 = CACurrentMediaTime()
+        m.goTo(page: 2)
+        let instant = (CACurrentMediaTime() - t0) * 1000
+        await sleep(0.4)
+        m.goTo(page: 1)
+        await sleep(0.4)
+        settings.animations = true
+        t0 = CACurrentMediaTime()
+        m.goTo(page: 2)
+        let mainThread = (CACurrentMediaTime() - t0) * 1000
+        await sleep(0.5)
+        let onPage2 = AX.frame(moved.element) ?? .zero
+        check(abs(onPage2.width - (area.width - 20)) < 4, "avec animation, la fenêtre arrive à la bonne place")
+        log(String(format: "   changement de page : %.0f ms sans animation, %.0f ms d'attente avec animation (puis %.0f ms d'animation en arrière-plan)",
+                   instant, mainThread, settings.animationDuration * 1000))
+        check(mainThread < 60, "changer de page ne bloque pas (\(Int(mainThread)) ms)")
+        m.goTo(page: 1)
+        await sleep(0.5)
 
         let overview = Overview()
         overview.show(manager: m)

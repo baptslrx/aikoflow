@@ -172,7 +172,7 @@ final class Manager {
         case kAXFocusedWindowChangedNotification:
             focusChanged()
         case kAXWindowMovedNotification, kAXWindowResizedNotification:
-            guard let id = AX.windowID(element), let w = windows[id] else { return }
+            guard let id = AX.windowID(element), let w = windows[id], id != dragging else { return }
             // Seuls les déplacements faits à la souris comptent (les nôtres arrivent bouton relâché)
             if NSEvent.pressedMouseButtons != 0, !w.hidden, !w.floating, let placed = w.placed,
                let now = AX.frame(element), !close(now, placed) {
@@ -300,47 +300,71 @@ final class Manager {
 
     // MARK: - Placement
 
-    func apply() {
+    let animator = Animator()
+    /// Fenêtre tenue à la souris (⌃⌥ + glisser) : AikoFlow ne la replace pas pendant ce temps.
+    var dragging: UInt32?
+    /// Sens du glissement des fenêtres qui arrivent lors d'un changement de page (−1 : depuis la gauche, 1 : depuis la droite).
+    private var slide: CGFloat = 0
+
+    /// Place toutes les fenêtres : celles de la page en cours à leur case, les autres rangées hors de l'écran.
+    func apply(animated: Bool = true) {
         guard enabled else { return }
         let corner = ScreenGeometry.hiddenCorner
+        var moves: [FrameMove] = []
+        var hides: [FrameMove] = []
+        var targets: [UInt32: CGRect] = [:]
         for scr in NSScreen.screens {
             let id = scr.displayID
             let area = ScreenGeometry.area(scr)
-            let frames = layout(page, id).frames(area: area, gaps: gaps)
-            for (wid, f) in frames {
-                guard let w = windows[wid] else { continue }
-                var target = f
-                if fullscreen[page] == wid {
-                    target = area.insetBy(dx: gaps.outer, dy: gaps.outer)
-                }
-                place(w, target)
+            for (wid, f) in layout(page, id).frames(area: area, gaps: gaps) {
+                guard let w = windows[wid], wid != dragging else { continue }
+                let target = fullscreen[page] == wid ? area.insetBy(dx: gaps.outer, dy: gaps.outer) : f
+                targets[wid] = target
+                if !w.hidden, let placed = w.placed, close(placed, target) { continue }   // déjà en place : rien à faire
+                var from: CGRect? = w.hidden ? nil : (w.placed ?? w.lastVisible)
+                if w.hidden && slide != 0 { from = target.offsetBy(dx: slide * area.width * 0.18, dy: 0) }
+                moves.append(FrameMove(pid: w.pid, element: w.element, from: from, to: target))
+                w.placed = target
+                w.lastVisible = target
+                w.hidden = false
             }
-            if let fs = fullscreen[page], let w = windows[fs], w.screen == id { AX.raise(w.element) }
         }
-        for w in windows.values {
+        for w in windows.values where w.id != dragging {
             if w.page == page {
                 if w.floating && w.hidden {
-                    AX.setPosition(w.element, (w.lastVisible ?? defaultFrame(for: w)).origin)
+                    let f = w.lastVisible ?? defaultFrame(for: w)
+                    moves.append(FrameMove(pid: w.pid, element: w.element, from: nil, to: f))
                     w.hidden = false
                 }
             } else if !w.hidden {
-                if let f = AX.frame(w.element) { w.lastVisible = f }
-                AX.setPosition(w.element, corner)
+                if let p = w.placed, !w.floating { w.lastVisible = p }
+                else if let f = AX.frame(w.element) { w.lastVisible = f }
+                let size = w.lastVisible?.size ?? CGSize(width: 800, height: 600)
+                hides.append(FrameMove(pid: w.pid, element: w.element, from: nil,
+                                       to: CGRect(origin: corner, size: size)))
                 w.hidden = true
             }
         }
-        updateBorder()
+        slide = 0
+        let duration = animated && settings.animations ? settings.animationDuration : 0
+        let fs = fullscreen[page].flatMap { windows[$0] }
+        // Les fenêtres qui partent sont rangées tout de suite, celles qui arrivent glissent à leur place
+        animator.run(hides + moves, duration: duration) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.enabled else { return }
+                if let fs { AX.raise(fs.element) }
+                // Applis à taille minimale : on retient le cadre réel
+                for m in moves {
+                    if let id = AX.windowID(m.element), let w = self.windows[id], let real = AX.frame(m.element),
+                       !self.close(real, m.to) {
+                        w.placed = real
+                    }
+                }
+                self.updateBorder()
+            }
+        }
+        if let id = focusedID, let f = targets[id] { border.show(around: ScreenGeometry.toCocoa(f)) } else { updateBorder() }
         onChange?()
-    }
-
-    private func place(_ w: ManagedWindow, _ f: CGRect) {
-        w.hidden = false
-        w.placed = f
-        w.lastVisible = f
-        if let now = AX.frame(w.element), close(now, f) { return }
-        AX.setFrame(w.element, f)
-        // Certaines applis imposent une taille minimale : on retient le cadre réel pour ne pas s'en mêler
-        if let real = AX.frame(w.element) { w.placed = real }
     }
 
     // MARK: - Focus
@@ -395,6 +419,7 @@ final class Manager {
 
     func goTo(page n: Int, focus shouldFocus: Bool = true) {
         guard enabled, (1...9).contains(n), n != page else { return }
+        slide = n > page ? 1 : -1
         page = n
         suppressFocusUntil = Date().addingTimeInterval(0.5)
         apply()
@@ -505,6 +530,7 @@ final class Manager {
         pendingUserChange.removeAll()
         for id in ids {
             guard let w = windows[id], w.page == page, let placed = w.placed, let now = AX.frame(w.element) else { continue }
+            defer { w.placed = now }   // pour qu'apply() la remette bien à sa place si besoin
             let resized = abs(now.width - placed.width) > 3 || abs(now.height - placed.height) > 3
             if resized {
                 layout(page, w.screen).adopt(id, newFrame: now, area: areaFor(w.screen), gaps: gaps)
@@ -528,6 +554,80 @@ final class Manager {
                 }
             }
         }
+        apply()
+    }
+
+    // MARK: - ⌃⌥ + souris : déplacer / redimensionner n'importe où dans la fenêtre
+
+    /// Fenêtre gérée sous le pointeur (coordonnées écran, origine en haut à gauche).
+    func windowAt(_ p: CGPoint) -> ManagedWindow? {
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+                as? [[String: Any]] else { return nil }
+        let me = ProcessInfo.processInfo.processIdentifier
+        for info in list {
+            guard (info[kCGWindowLayer as String] as? Int ?? 0) == 0,
+                  let pid = info[kCGWindowOwnerPID as String] as? pid_t, pid != me,
+                  let b = info[kCGWindowBounds as String] as? NSDictionary,
+                  let r = CGRect(dictionaryRepresentation: b), r.contains(p),
+                  let n = info[kCGWindowNumber as String] as? UInt32 else { continue }
+            return windows[n]   // la plus en avant ; nil si elle n'est pas gérée
+        }
+        return nil
+    }
+
+    func beginDrag(_ w: ManagedWindow) {
+        dragging = w.id
+        focus(w)
+    }
+
+    /// Fenêtre rangée sur laquelle on lâcherait (pour l'aperçu).
+    func dropTarget(for id: UInt32, at p: CGPoint) -> ManagedWindow? {
+        windows.values.first { o in
+            o.id != id && o.page == page && !o.floating && !o.hidden && (o.placed?.contains(p) ?? false)
+        }
+    }
+
+    func endDrag(at p: CGPoint) {
+        guard let id = dragging, let w = windows[id] else { dragging = nil; return }
+        dragging = nil
+        pendingUserChange.remove(id)
+        if w.floating {
+            w.lastVisible = AX.frame(w.element)
+        } else if let target = dropTarget(for: id, at: p) {
+            if target.screen == w.screen {
+                layout(page, w.screen).swap(id, target.id)
+            } else {
+                layout(page, w.screen).remove(id)
+                w.screen = target.screen
+                layout(page, target.screen).insert(id, near: target.id, area: areaFor(target.screen), gaps: gaps)
+            }
+        } else if let scr = ScreenGeometry.screen(containing: p), scr.displayID != w.screen {
+            layout(page, w.screen).remove(id)
+            w.screen = scr.displayID
+            layout(page, scr.displayID).insert(id, near: nil, area: areaFor(scr.displayID), gaps: gaps)
+        }
+        // Retour en douceur de là où on l'a lâchée
+        if let now = AX.frame(w.element) { w.placed = now }
+        apply()
+    }
+
+    /// Redimensionnement à la souris, en direct : les autres fenêtres suivent.
+    func liveResize(_ w: ManagedWindow, to f: CGRect) {
+        if w.floating {
+            AX.setFrame(w.element, f)
+            w.lastVisible = f
+            return
+        }
+        layout(page, w.screen).adopt(w.id, newFrame: f, area: areaFor(w.screen), gaps: gaps)
+        let saved = dragging
+        dragging = nil
+        apply(animated: false)
+        dragging = saved
+    }
+
+    func endResize() {
+        if let id = dragging { pendingUserChange.remove(id) }
+        dragging = nil
         apply()
     }
 

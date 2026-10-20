@@ -25,6 +25,9 @@ final class FlowSettings: ObservableObject {
     @Published var innerGap: Double { didSet { d.set(innerGap, forKey: "innerGap") } }
     @Published var outerGap: Double { didSet { d.set(outerGap, forKey: "outerGap") } }
     @Published var showBorder: Bool { didSet { d.set(showBorder, forKey: "showBorder") } }
+    @Published var animations: Bool { didSet { d.set(animations, forKey: "animations") } }
+    @Published var animationDuration: Double { didSet { d.set(animationDuration, forKey: "animationDuration") } }
+    @Published var mouseDrag: Bool { didSet { d.set(mouseDrag, forKey: "mouseDrag") } }
     @Published var enableAtLaunch: Bool { didSet { d.set(enableAtLaunch, forKey: "enableAtLaunch") } }
     @Published var floating: [AppRef] { didSet { save(floating, "floating") } }
     @Published var ignored: [AppRef] { didSet { save(ignored, "ignored") } }
@@ -35,6 +38,9 @@ final class FlowSettings: ObservableObject {
         innerGap = d.object(forKey: "innerGap") as? Double ?? 8
         outerGap = d.object(forKey: "outerGap") as? Double ?? 10
         showBorder = d.object(forKey: "showBorder") as? Bool ?? true
+        animations = d.object(forKey: "animations") as? Bool ?? true
+        animationDuration = d.object(forKey: "animationDuration") as? Double ?? 0.16
+        mouseDrag = d.object(forKey: "mouseDrag") as? Bool ?? true
         enableAtLaunch = d.object(forKey: "enableAtLaunch") as? Bool ?? true
         floating = Self.load("floating", d) ?? Self.defaultFloating
         ignored = Self.load("ignored", d) ?? []

@@ -73,6 +73,20 @@ enum AX {
         AXUIElementSetAttributeValue(e, kAXMainAttribute as CFString, kCFBooleanTrue)
     }
 
+    /// Coupe « AXEnhancedUserInterface » d'une appli (renvoie vrai s'il était actif, pour le remettre ensuite).
+    static func disableEnhancedUI(_ pid: pid_t) -> Bool {
+        let app = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(app, 0.5)
+        guard bool(app, "AXEnhancedUserInterface") else { return false }
+        AXUIElementSetAttributeValue(app, "AXEnhancedUserInterface" as CFString, kCFBooleanFalse)
+        return true
+    }
+
+    static func restoreEnhancedUI(_ pid: pid_t) {
+        AXUIElementSetAttributeValue(AXUIElementCreateApplication(pid), "AXEnhancedUserInterface" as CFString,
+                                     kCFBooleanTrue)
+    }
+
     static func setFrontmost(_ pid: pid_t) {
         AXUIElementSetAttributeValue(AXUIElementCreateApplication(pid), kAXFrontmostAttribute as CFString, kCFBooleanTrue)
     }

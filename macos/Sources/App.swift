@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var settings: FlowSettings!
     private var manager: Manager!
     private var hotkeys: HotKeyCenter!
+    private var drag: DragController!
     private let overview = Overview()
     private var statusItem: NSStatusItem!
     private var windowsByName: [String: NSWindow] = [:]
@@ -39,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         settings = FlowSettings()
         manager = Manager(settings: settings)
         manager.onChange = { [weak self] in self?.updateStatus() }
+        drag = DragController(manager: manager, settings: settings)
         hotkeys = HotKeyCenter()
         overview.onPick = { [weak self] n in self?.manager.goTo(page: n) }
 
@@ -52,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             showPermission()
         } else if settings.enableAtLaunch {
             manager.enable()
+            drag.start()
         }
         registerHotkeys()
         updateStatus()
@@ -116,11 +119,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func toggleEnabled() {
         if manager.enabled {
             overview.hide()
+            drag.stop()
             manager.disable()
             Toast.shared.show("AikoFlow coupé — tes fenêtres sont libres")
         } else {
             guard AX.isTrusted else { showPermission(); return }
             manager.enable()
+            drag.start()
             Toast.shared.show("AikoFlow activé · page \(manager.page)")
         }
         registerHotkeys()

@@ -65,6 +65,21 @@ struct SettingsView: View {
                     Text("Avec ⌥ seule, tu perds { [ | ~ au clavier français et ⌥ ← → pour sauter de mot en mot.")
                         .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
+                section("Fluidité") {
+                    Toggle("Animations", isOn: $settings.animations).toggleStyle(.switch).tint(Theme.accentUI)
+                    HStack {
+                        Text("Vitesse").font(.system(size: 13)).frame(width: 150, alignment: .leading)
+                        Picker("", selection: $settings.animationDuration) {
+                            Text("Éclair").tag(0.10)
+                            Text("Rapide").tag(0.16)
+                            Text("Douce").tag(0.24)
+                        }
+                        .pickerStyle(.segmented).labelsHidden()
+                    }
+                    .disabled(!settings.animations)
+                    Toggle("Touche de base + clic glissé pour déplacer ou redimensionner", isOn: $settings.mouseDrag)
+                        .toggleStyle(.switch).tint(Theme.accentUI)
+                }
                 section("Espacements") {
                     slider("Entre les fenêtres", $settings.innerGap)
                     slider("Autour de l'écran", $settings.outerGap)
