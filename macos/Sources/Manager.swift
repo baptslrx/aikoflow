@@ -388,7 +388,7 @@ final class Manager {
     }
 
     func updateBorder() {
-        guard enabled, settings.showBorder, let id = focusedID, let w = windows[id], w.page == page, !w.hidden,
+        guard enabled, dragging == nil, settings.showBorder, let id = focusedID, let w = windows[id], w.page == page, !w.hidden,
               let f = AX.frame(w.element) else {
             border.hide()
             return
@@ -577,7 +577,10 @@ final class Manager {
 
     func beginDrag(_ w: ManagedWindow) {
         dragging = w.id
-        focus(w)
+        lastFocused[w.page] = w.id
+        AX.raise(w.element)
+        AX.setFrontmost(w.pid)
+        border.hide()   // la bordure revient quand on lâche
     }
 
     /// Fenêtre rangée sur laquelle on lâcherait (pour l'aperçu).
